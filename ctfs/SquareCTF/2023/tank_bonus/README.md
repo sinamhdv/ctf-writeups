@@ -1,0 +1,11 @@
+CTFtime: https://ctftime.org/task/27144
+
+**Summary**: Using off-by-one and a weird primitive to get arbitrary read/write on the stack and then ret2libc
+
+Note: This is also a solution to the tank challenge. The first version of the challenge just has a `system("/bin/sh")` function in the program that we can call so there is no need for ret2libc.
+
+In this challenge, we can shoot projectiles (i.e. write a single byte) into a buffer. There are enemies on the buffer, and by hitting them 3 consecutive times we can get a special ammo that will hit 3 consecutive cells of the buffer. We can provide angle and power for the shooting, and the game will then calculate the projectile landing point using projectile kinematics formulas.
+
+We can write a function that can calculate the needed power to shoot into a specific offset. Then we can use this to hit 3 enemies to get a special shot. The game doesn't check for out-of-bounds writes when shooting the special ammo, and if we provide the max power and the angle of 45 degrees with a special shot, we will end up writing one byte into the `max_power` variable, which is located right after the buffer. We can also shoot another special ammo at offset 0, which will cause it to write a byte at offset -1 as well. This will write into `max_angle` variable and let us shoot backwards using angles more than 90 degrees!
+
+We will shoot into the variable that controls the maximum index we can provide for our ammo character to be selected from a constant string containing only characters `-` and `_`. By making this value larger, we can select ammo characters from the fire command buffer, which is filled with user input each time. This let's us write arbitrary characters into arbitrary locations on the stack. We can also choose an even bigger index for our ammo character and shoot that character into the game buffer (that is printed each turn) to read arbitrary values from the stack. This way, we can leak the return address of `main()`, which is a libc address. Then, we will write a ROP payload to call `system("/bin/sh")` on the stack and force the `game_loop` function to return by writing into the variable that controls when the game will finish.
