@@ -1,0 +1,24 @@
+# Build using mypatch.diff to enable dumping disassembly
+FROM debian:bookworm-slim as builder
+RUN apt update && \
+    apt install -y \
+        build-essential cmake curl libmpfr-dev \
+        libmpc-dev libgmp-dev e2fsprogs ninja-build \
+        qemu-system-gui qemu-system-x86 qemu-utils \
+        ccache rsync unzip texinfo libssl-dev \
+        sudo gcc g++ git wget && \
+    rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/SerenityOS/serenity/
+RUN useradd build -m -d /home/build
+RUN chown -R build:build serenity
+USER build
+WORKDIR serenity
+RUN git checkout fbde901614368dcf03d4a8eee800d8b89131465f
+COPY mypatch.diff .
+RUN git apply mypatch.diff
+RUN ./Meta/serenity.sh build lagom js
+
+FROM scratch
+COPY --from=builder /serenity/Build/lagom/bin/js .
+COPY --from=builder /serenity/Build/lagom/lib/ .
+
