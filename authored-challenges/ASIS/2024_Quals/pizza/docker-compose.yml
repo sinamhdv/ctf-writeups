@@ -1,0 +1,5 @@
+services:
+  pizza:
+    build: .
+    ports:
+      - "5002:5000"

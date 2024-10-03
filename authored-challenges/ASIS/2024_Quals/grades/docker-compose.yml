@@ -1,0 +1,5 @@
+services:
+  grades:
+    build: .
+    ports:
+      - "5003:5000"
